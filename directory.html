@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PNWCSA Farmer-to-Farmer Directory</title>
+  <link rel="stylesheet" href="library.css">
+  <link rel="stylesheet" href="directory.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="controls">
+      <input id="search" class="search" type="search" placeholder="Search people, businesses, locations…" aria-label="Search directory">
+      <div id="chips" class="chips" role="group" aria-label="Filter by category"></div>
+      <span id="count" class="count"></span>
+    </div>
+    <div id="table-container"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="directory.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+/* Directory-specific overrides on top of library.css */
+
+.biz {
+  font-weight: 400;
+  color: var(--pnw-muted);
+  font-size: 13px;
+  margin: 2px 0 6px;
+}
+
+.contact-cell {
+  font-size: 13px;
+}
+.contact-cell a {
+  color: var(--pnw-link);
+  text-decoration: none;
+}
+.contact-cell a:hover { text-decoration: underline; }
+
+.no-reviews {
+  display: inline-block;
+  color: var(--pnw-muted);
+  font-size: 12px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.review {
+  background: #fff;
+  border-left: 3px solid var(--pnw-green);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+.review-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.review-meta {
+  color: var(--pnw-muted);
+  font-size: 13px;
+}
+.review-body {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 4px 0;
+}
+.review-attr {
+  color: var(--pnw-muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+.review-ctx { font-style: italic; }
+
+.rec {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rec-yes   { background: #dfe9d2; color: var(--pnw-green-dark); }
+.rec-mixed { background: #f6e6cc; color: #8a5a16; }
+.rec-no    { background: #f1d6cd; color: #8a2a16; }
