@@ -9,6 +9,7 @@ const state = {
   listings: [],
   search: "",
   activeCategories: new Set(),
+  activeRegions: new Set(),
   sortKey: "Person's name",
   sortDir: 1,
   expanded: new Set(),
@@ -44,29 +45,27 @@ function joinFeedback(listings, feedback) {
   }));
 }
 
-function distinctCategories(rows) {
-  const set = new Set();
-  for (const r of rows) {
-    // Category may be multi-value (comma-separated). Split for chip extraction.
-    String(r.Category || "").split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(c => set.add(c));
-  }
-  return [...set].sort((a, b) => a.localeCompare(b));
+function splitMulti(s) {
+  return String(s || "").split(/[,;]/).map(x => x.trim()).filter(Boolean);
 }
 
-function rowCategories(r) {
-  return String(r.Category || "").split(/[,;]/).map(s => s.trim()).filter(Boolean);
+function distinctValues(rows, field) {
+  const set = new Set();
+  for (const r of rows) splitMulti(r[field]).forEach(v => set.add(v));
+  return [...set].sort((a, b) => a.localeCompare(b));
 }
 
 function applyFilters(rows) {
   const q = state.search.trim().toLowerCase();
   return rows.filter(r => {
     if (state.activeCategories.size > 0) {
-      const cats = rowCategories(r);
-      const match = cats.some(c => state.activeCategories.has(c));
-      if (!match) return false;
+      if (!splitMulti(r.Category).some(c => state.activeCategories.has(c))) return false;
+    }
+    if (state.activeRegions.size > 0) {
+      if (!splitMulti(r.Region).some(c => state.activeRegions.has(c))) return false;
     }
     if (q) {
-      const hay = [r["Person's name"], r["Business or organization"], r.Category, r["Location (City)"]]
+      const hay = [r["Person's name"], r.Organization, r.Category, r["Focus/Specialty"], r.Region, r.Address]
         .filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
@@ -104,6 +103,10 @@ function recBadge(rec) {
   return "";
 }
 
+function pillList(value) {
+  return splitMulti(value).map(v => `<span class="cat-pill">${escapeHTML(v)}</span>`).join(" ");
+}
+
 function renderReview(f) {
   const showName = String(f["How would you like to be identified?"] || "").toLowerCase().includes("name")
     && (f["Your display name (only if attributing)"] || "").trim();
@@ -133,8 +136,7 @@ function renderRow(r) {
   if (r.Website) contactBits.push(`<a href="${escapeHTML(ensureProtocol(r.Website))}" target="_blank" rel="noopener">Website</a>`);
   if (r.Phone)   contactBits.push(`<a href="tel:${escapeHTML(r.Phone.replace(/[^0-9+]/g,''))}">${escapeHTML(r.Phone)}</a>`);
   if (r.Email)   contactBits.push(`<a href="mailto:${escapeHTML(r.Email)}">${escapeHTML(r.Email)}</a>`);
-
-  const cats = rowCategories(r).map(c => `<span class="cat-pill">${escapeHTML(c)}</span>`).join(" ");
+  const address = r.Address ? `<div class="addr">${escapeHTML(r.Address)}</div>` : "";
 
   const reviewToggle = reviews.length > 0
     ? `<button class="tips-toggle" data-toggle="${escapeHTML(id)}">${expanded ? "▾" : "▸"} ${reviews.length} review${reviews.length === 1 ? "" : "s"}</button>`
@@ -142,17 +144,21 @@ function renderRow(r) {
 
   let html = `<tr data-id="${escapeHTML(id)}">
     <td data-label="Name" class="resource-name">
-      ${escapeHTML(r["Person's name"])}
-      <div class="biz">${escapeHTML(r["Business or organization"] || "")}</div>
+      ${escapeHTML(r["Person's name"] || "")}
       ${reviewToggle}
     </td>
-    <td data-label="Category">${cats}</td>
-    <td data-label="Location">${escapeHTML(r["Location (City)"] || "")}</td>
-    <td data-label="Contact" class="contact-cell">${contactBits.join(" · ")}</td>
+    <td data-label="Organization">${escapeHTML(r.Organization || "")}</td>
+    <td data-label="Category">${pillList(r.Category)}</td>
+    <td data-label="Focus">${pillList(r["Focus/Specialty"])}</td>
+    <td data-label="Region">${pillList(r.Region)}</td>
+    <td data-label="Contact" class="contact-cell">
+      ${contactBits.length ? `<div>${contactBits.join(" · ")}</div>` : ""}
+      ${address}
+    </td>
   </tr>`;
 
   if (expanded && reviews.length > 0) {
-    html += `<tr class="tips-row"><td colspan="4">${reviews.map(renderReview).join("")}</td></tr>`;
+    html += `<tr class="tips-row"><td colspan="6">${reviews.map(renderReview).join("")}</td></tr>`;
   }
   return html;
 }
@@ -166,13 +172,15 @@ function render() {
       <thead>
         <tr>
           <th data-sort="Person's name">Name ${arrow("Person's name")}</th>
+          <th data-sort="Organization">Organization ${arrow("Organization")}</th>
           <th data-sort="Category">Category ${arrow("Category")}</th>
-          <th data-sort="Location (City)">Location ${arrow("Location (City)")}</th>
+          <th data-sort="Focus/Specialty">Focus ${arrow("Focus/Specialty")}</th>
+          <th data-sort="Region">Region ${arrow("Region")}</th>
           <th>Contact</th>
         </tr>
       </thead>
       <tbody>
-        ${rows.length ? rows.map(renderRow).join("") : `<tr><td colspan="4" class="empty">No people match your filters.</td></tr>`}
+        ${rows.length ? rows.map(renderRow).join("") : `<tr><td colspan="6" class="empty">No people match your filters.</td></tr>`}
       </tbody>
     </table>
   `;
@@ -181,12 +189,17 @@ function render() {
   postHeight();
 }
 
-function renderChips() {
-  const cats = distinctCategories(state.listings);
-  document.getElementById("chips").innerHTML = cats.map(c => {
-    const active = state.activeCategories.has(c) ? " active" : "";
-    return `<button class="chip${active}" data-cat="${escapeHTML(c)}">${escapeHTML(c)}</button>`;
+function renderFilterGroup(containerId, field, activeSet) {
+  const values = distinctValues(state.listings, field);
+  document.getElementById(containerId).innerHTML = values.map(v => {
+    const active = activeSet.has(v) ? " active" : "";
+    return `<button class="chip${active}" data-value="${escapeHTML(v)}">${escapeHTML(v)}</button>`;
   }).join("");
+}
+
+function renderChips() {
+  renderFilterGroup("chips-category", "Category", state.activeCategories);
+  renderFilterGroup("chips-region", "Region", state.activeRegions);
 }
 
 function postHeight() {
@@ -199,13 +212,19 @@ function attachHandlers() {
   document.getElementById("search").addEventListener("input", (e) => {
     state.search = e.target.value; render();
   });
-  document.getElementById("chips").addEventListener("click", (e) => {
-    const btn = e.target.closest(".chip"); if (!btn) return;
-    const c = btn.dataset.cat;
-    if (state.activeCategories.has(c)) state.activeCategories.delete(c);
-    else state.activeCategories.add(c);
-    renderChips(); render();
-  });
+
+  const wireGroup = (containerId, activeSet) => {
+    document.getElementById(containerId).addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip"); if (!btn) return;
+      const v = btn.dataset.value;
+      if (activeSet.has(v)) activeSet.delete(v);
+      else activeSet.add(v);
+      renderChips(); render();
+    });
+  };
+  wireGroup("chips-category", state.activeCategories);
+  wireGroup("chips-region", state.activeRegions);
+
   document.getElementById("table-container").addEventListener("click", (e) => {
     const sortHeader = e.target.closest("th[data-sort]");
     if (sortHeader) {
