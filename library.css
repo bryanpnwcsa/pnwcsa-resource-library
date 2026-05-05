@@ -1,0 +1,209 @@
+/* PNWCSA Resource Library — iframe styling
+   Targets pnwcsa.org visual language: warm earthy palette, generous spacing,
+   clean sans body type. Adjust the CSS variables below to match exact brand. */
+
+:root {
+  --pnw-green: #4a6b3a;
+  --pnw-green-dark: #2f4a23;
+  --pnw-accent: #c97b3a;
+  --pnw-bg: #faf7f1;
+  --pnw-card: #ffffff;
+  --pnw-border: #e3ddd0;
+  --pnw-text: #2b2a26;
+  --pnw-muted: #6b6a63;
+  --pnw-link: #2f4a23;
+  --pnw-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--pnw-bg);
+  color: var(--pnw-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--pnw-card);
+  border: 1px solid var(--pnw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--pnw-shadow);
+}
+
+.search {
+  flex: 1 1 220px;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid var(--pnw-border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  background: #fff;
+}
+.search:focus {
+  outline: 2px solid var(--pnw-green);
+  outline-offset: 1px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border: 1px solid var(--pnw-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--pnw-text);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.chip:hover { border-color: var(--pnw-green); }
+.chip.active {
+  background: var(--pnw-green);
+  border-color: var(--pnw-green);
+  color: #fff;
+}
+
+.count {
+  margin-left: auto;
+  color: var(--pnw-muted);
+  font-size: 13px;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--pnw-card);
+  border: 1px solid var(--pnw-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--pnw-shadow);
+}
+
+thead th {
+  background: #f1ece1;
+  color: var(--pnw-green-dark);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid var(--pnw-border);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+thead th[data-sort]:hover { background: #ebe4d4; }
+thead th .arrow { color: var(--pnw-accent); margin-left: 4px; }
+
+tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--pnw-border);
+  vertical-align: top;
+  font-size: 15px;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #fbf9f3; }
+
+.resource-name { font-weight: 600; color: var(--pnw-green-dark); }
+.resource-name a { color: inherit; text-decoration: none; }
+.resource-name a:hover { text-decoration: underline; }
+
+.website-cell a {
+  color: var(--pnw-link);
+  word-break: break-word;
+  font-size: 13px;
+}
+
+.cat-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #eef1e6;
+  color: var(--pnw-green-dark);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.notes { color: var(--pnw-muted); font-size: 13px; margin-top: 4px; }
+
+.tips-row td {
+  background: #f6f1e3;
+  padding: 0 12px 12px 12px;
+  border-bottom: 1px solid var(--pnw-border);
+}
+.tips-toggle {
+  background: none;
+  border: none;
+  color: var(--pnw-accent);
+  cursor: pointer;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tips-toggle:hover { text-decoration: underline; }
+.tip {
+  padding: 8px 12px;
+  margin: 6px 0;
+  background: #fff;
+  border-left: 3px solid var(--pnw-accent);
+  border-radius: 4px;
+}
+.tip-attr { color: var(--pnw-muted); font-size: 12px; margin-top: 4px; }
+
+.empty, .error {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--pnw-muted);
+}
+.error { color: #a13b1f; }
+
+@media (max-width: 640px) {
+  table, thead, tbody, tr, td, th { display: block; }
+  thead { display: none; }
+  tbody tr {
+    background: var(--pnw-card);
+    border: 1px solid var(--pnw-border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    padding: 8px 12px;
+  }
+  tbody td {
+    border: none;
+    padding: 4px 0;
+  }
+  tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pnw-muted);
+    margin-bottom: 2px;
+  }
+  table { box-shadow: none; border: none; background: transparent; }
+}
