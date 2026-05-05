@@ -10,8 +10,15 @@
   <div class="wrap">
     <div class="controls">
       <input id="search" class="search" type="search" placeholder="Search resources…" aria-label="Search resources">
-      <div id="chips" class="chips" role="group" aria-label="Filter by category"></div>
       <span id="count" class="count"></span>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Category:</span>
+      <div id="chips-category" class="chips" role="group" aria-label="Filter by category"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Region:</span>
+      <div id="chips-region" class="chips" role="group" aria-label="Filter by region"></div>
     </div>
     <div id="table-container"></div>
   </div>

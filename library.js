@@ -6,16 +6,15 @@ const RESOURCES_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQp_lYe9S
 const TIPS_CSV      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQp_lYe9SV489ucdEE7tAf8FwgAVw6KuMz_yIOf2zFlAFfUpeBW8MjPipu74zM24bgYV9Ik3VIyv2Bj/pub?gid=1049912398&single=true&output=csv";
 
 // Rows must have Approved=TRUE and Retracted!=TRUE to appear.
-// Set to false for previewing unapproved data while building out the sheet.
 const REQUIRE_APPROVAL = true;
 
 const state = {
   resources: [],
-  tips: [],
   search: "",
   activeCategories: new Set(),
+  activeRegions: new Set(),
   sortKey: "Resource name",
-  sortDir: 1, // 1 asc, -1 desc
+  sortDir: 1,
   expanded: new Set(),
 };
 
@@ -24,11 +23,8 @@ const isTrue = (v) => String(v ?? "").trim().toUpperCase() === "TRUE";
 function loadCSV(url) {
   return new Promise((resolve, reject) => {
     Papa.parse(url, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => resolve(res.data),
-      error: reject,
+      download: true, header: true, skipEmptyLines: true,
+      complete: (res) => resolve(res.data), error: reject,
     });
   });
 }
@@ -52,12 +48,13 @@ function joinTips(resources, tips) {
   }));
 }
 
-function distinctCategories(rows) {
+function splitMulti(s) {
+  return String(s || "").split(/[,;]/).map(x => x.trim()).filter(Boolean);
+}
+
+function distinctValues(rows, field) {
   const set = new Set();
-  for (const r of rows) {
-    const c = (r.Category || "").trim();
-    if (c) set.add(c);
-  }
+  for (const r of rows) splitMulti(r[field]).forEach(v => set.add(v));
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
@@ -65,10 +62,13 @@ function applyFilters(rows) {
   const q = state.search.trim().toLowerCase();
   return rows.filter(r => {
     if (state.activeCategories.size > 0) {
-      if (!state.activeCategories.has((r.Category || "").trim())) return false;
+      if (!splitMulti(r.Category).some(c => state.activeCategories.has(c))) return false;
+    }
+    if (state.activeRegions.size > 0) {
+      if (!splitMulti(r.Region).some(c => state.activeRegions.has(c))) return false;
     }
     if (q) {
-      const hay = [r["Resource name"], r.Description, r.Notes, r["Why useful"], r.Category]
+      const hay = [r["Resource name"], r.Description, r.Notes, r["Why useful"], r.Category, r.Region]
         .filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
@@ -77,8 +77,7 @@ function applyFilters(rows) {
 }
 
 function applySort(rows) {
-  const key = state.sortKey;
-  const dir = state.sortDir;
+  const key = state.sortKey, dir = state.sortDir;
   return [...rows].sort((a, b) => {
     const av = (a[key] || "").toString().toLowerCase();
     const bv = (b[key] || "").toString().toLowerCase();
@@ -96,10 +95,12 @@ function escapeHTML(s) {
 
 function shortUrl(u) {
   if (!u) return "";
-  try {
-    const h = new URL(u).hostname.replace(/^www\./, "");
-    return h;
-  } catch { return u; }
+  try { return new URL(u).hostname.replace(/^www\./, ""); }
+  catch { return u; }
+}
+
+function pillList(value) {
+  return splitMulti(value).map(v => `<span class="cat-pill">${escapeHTML(v)}</span>`).join(" ");
 }
 
 function renderRow(r) {
@@ -124,7 +125,8 @@ function renderRow(r) {
   let html = `<tr data-id="${escapeHTML(id)}">
     <td data-label="Resource" class="resource-name">${nameCell}${tipsToggle}</td>
     <td data-label="Website" class="website-cell">${r.Website ? `<a href="${escapeHTML(r.Website)}" target="_blank" rel="noopener">${escapeHTML(shortUrl(r.Website))}</a>` : ""}</td>
-    <td data-label="Category">${r.Category ? `<span class="cat-pill">${escapeHTML(r.Category)}</span>` : ""}</td>
+    <td data-label="Category">${pillList(r.Category)}</td>
+    <td data-label="Region">${pillList(r.Region)}</td>
     <td data-label="Description">${desc}${notes}</td>
   </tr>`;
 
@@ -138,7 +140,7 @@ function renderRow(r) {
         <div class="tip-attr">— ${attr}</div>
       </div>`;
     }).join("");
-    html += `<tr class="tips-row"><td colspan="4">${tipsHTML}</td></tr>`;
+    html += `<tr class="tips-row"><td colspan="5">${tipsHTML}</td></tr>`;
   }
 
   return html;
@@ -146,62 +148,68 @@ function renderRow(r) {
 
 function render() {
   const rows = applySort(applyFilters(state.resources));
-
   const arrow = (k) => state.sortKey === k ? `<span class="arrow">${state.sortDir === 1 ? "▲" : "▼"}</span>` : "";
 
   const html = `
     <table>
       <thead>
         <tr>
-          <th data-sort="Resource name">Resource ${arrow("Resource name")}</th>
-          <th data-sort="Website">Website ${arrow("Website")}</th>
+          <th data-sort="Resource name">Resource name ${arrow("Resource name")}</th>
+          <th>Website</th>
           <th data-sort="Category">Category ${arrow("Category")}</th>
+          <th data-sort="Region">Region ${arrow("Region")}</th>
           <th>Description</th>
         </tr>
       </thead>
       <tbody>
-        ${rows.length ? rows.map(renderRow).join("") : `<tr><td colspan="4" class="empty">No resources match your filters.</td></tr>`}
+        ${rows.length ? rows.map(renderRow).join("") : `<tr><td colspan="5" class="empty">No resources match your filters.</td></tr>`}
       </tbody>
     </table>
   `;
   document.getElementById("table-container").innerHTML = html;
   document.getElementById("count").textContent = `${rows.length} resource${rows.length === 1 ? "" : "s"}`;
-
   postHeight();
 }
 
-function renderChips() {
-  const cats = distinctCategories(state.resources);
-  const html = cats.map(c => {
-    const active = state.activeCategories.has(c) ? " active" : "";
-    return `<button class="chip${active}" data-cat="${escapeHTML(c)}">${escapeHTML(c)}</button>`;
+function renderFilterGroup(containerId, field, activeSet) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const values = distinctValues(state.resources, field);
+  el.innerHTML = values.map(v => {
+    const active = activeSet.has(v) ? " active" : "";
+    return `<button class="chip${active}" data-value="${escapeHTML(v)}">${escapeHTML(v)}</button>`;
   }).join("");
-  document.getElementById("chips").innerHTML = html;
+}
+
+function renderChips() {
+  renderFilterGroup("chips-category", "Category", state.activeCategories);
+  renderFilterGroup("chips-region", "Region", state.activeRegions);
 }
 
 function postHeight() {
-  // Tell the parent Wix page how tall the iframe needs to be.
-  const h = document.documentElement.scrollHeight;
   if (window.parent !== window) {
-    window.parent.postMessage({ type: "pnwcsa-resize", height: h }, "*");
+    window.parent.postMessage({ type: "pnwcsa-resize", height: document.documentElement.scrollHeight }, "*");
   }
 }
 
 function attachHandlers() {
   document.getElementById("search").addEventListener("input", (e) => {
-    state.search = e.target.value;
-    render();
+    state.search = e.target.value; render();
   });
 
-  document.getElementById("chips").addEventListener("click", (e) => {
-    const btn = e.target.closest(".chip");
-    if (!btn) return;
-    const cat = btn.dataset.cat;
-    if (state.activeCategories.has(cat)) state.activeCategories.delete(cat);
-    else state.activeCategories.add(cat);
-    renderChips();
-    render();
-  });
+  const wireGroup = (containerId, activeSet) => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip"); if (!btn) return;
+      const v = btn.dataset.value;
+      if (activeSet.has(v)) activeSet.delete(v);
+      else activeSet.add(v);
+      renderChips(); render();
+    });
+  };
+  wireGroup("chips-category", state.activeCategories);
+  wireGroup("chips-region", state.activeRegions);
 
   document.getElementById("table-container").addEventListener("click", (e) => {
     const sortHeader = e.target.closest("th[data-sort]");
@@ -209,8 +217,7 @@ function attachHandlers() {
       const k = sortHeader.dataset.sort;
       if (state.sortKey === k) state.sortDir *= -1;
       else { state.sortKey = k; state.sortDir = 1; }
-      render();
-      return;
+      render(); return;
     }
     const toggle = e.target.closest(".tips-toggle");
     if (toggle) {
@@ -231,10 +238,7 @@ async function init() {
       window.SHOW_TIPS ? loadCSV(TIPS_CSV) : Promise.resolve([]),
     ]);
     state.resources = joinTips(approvedFilter(resources), approvedFilter(tips));
-    state.tips = tips;
-    renderChips();
-    render();
-    attachHandlers();
+    renderChips(); render(); attachHandlers();
     window.addEventListener("resize", postHeight);
   } catch (err) {
     console.error(err);

@@ -1,25 +1,5 @@
 /* Directory-specific overrides on top of library.css */
 
-.filter-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: var(--pnw-card);
-  border: 1px solid var(--pnw-border);
-  border-radius: var(--radius);
-  box-shadow: var(--pnw-shadow);
-}
-.filter-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pnw-green-dark);
-  margin-right: 4px;
-  white-space: nowrap;
-}
-
 .addr {
   color: var(--pnw-muted);
   font-size: 12px;
