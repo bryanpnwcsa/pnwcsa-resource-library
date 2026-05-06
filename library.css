@@ -34,6 +34,45 @@ html, body {
   padding: 16px;
 }
 
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.btn-primary {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--pnw-green);
+  color: #fff;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.btn-primary:hover { background: var(--pnw-green-dark); }
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+.action-link {
+  color: var(--pnw-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.action-link:hover { text-decoration: underline; }
+
+.review-actions {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
 .filter-group {
   display: flex;
   flex-wrap: wrap;

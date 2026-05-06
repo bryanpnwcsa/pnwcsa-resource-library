@@ -8,6 +8,9 @@
 </head>
 <body>
   <div class="wrap">
+    <div class="page-actions">
+      <a class="btn-primary" href="https://docs.google.com/forms/d/1BtOjfVBd3AX3SSueZGBCsIqHIi86TDtjj98RYvM1bps" target="_blank" rel="noopener">+ Add a resource listing</a>
+    </div>
     <div class="controls">
       <input id="search" class="search" type="search" placeholder="Search resources…" aria-label="Search resources">
       <span id="count" class="count"></span>
@@ -19,6 +22,10 @@
     <div class="filter-group">
       <span class="filter-label">Region:</span>
       <div id="chips-region" class="chips" role="group" aria-label="Filter by region"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Organization:</span>
+      <div id="chips-organization" class="chips" role="group" aria-label="Filter by organization"></div>
     </div>
     <div id="table-container"></div>
   </div>

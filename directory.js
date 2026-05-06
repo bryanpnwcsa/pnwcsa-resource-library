@@ -5,6 +5,12 @@ const FEEDBACK_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQp_lYe9SV
 
 const REQUIRE_APPROVAL = true;
 
+// Form for leaving feedback on a specific person — PersonID prefilled.
+const FEEDBACK_FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLScOyL1zPihxiciTdE_p8v-kZFdLTTh4d641LKrPCIiLHJe3ew/viewform?usp=pp_url&entry.33016198=";
+
+// Form for relaying a message to a specific reviewer — FeedbackID prefilled.
+const RELAY_FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSdoUM5h7A8Q2gZODc2tbB6KoPRVlYJYKS0aMzKarUkUbwU8Ag/viewform?usp=pp_url&entry.573107829=";
+
 const state = {
   listings: [],
   search: "",
@@ -114,6 +120,11 @@ function renderReview(f) {
   const ctx = [f["Region (optional)"], f["Farm experience (optional)"], f["Employee status (optional)"]]
     .filter(Boolean).map(escapeHTML).join(" · ");
 
+  const feedbackId = (f.FeedbackID || "").trim();
+  const relayLink = feedbackId
+    ? `<a class="action-link" href="${RELAY_FORM_BASE}${encodeURIComponent(feedbackId)}" target="_blank" rel="noopener">Relay a message to this reviewer</a>`
+    : "";
+
   return `<div class="review">
     <div class="review-head">
       ${recBadge(f["Would you recommend this professional to another farmer?"])}
@@ -124,6 +135,7 @@ function renderReview(f) {
     </div>
     ${f["Tell us about your experience"] ? `<div class="review-body">${escapeHTML(f["Tell us about your experience"])}</div>` : ""}
     <div class="review-attr">— ${attr}${ctx ? ` <span class="review-ctx">(${ctx})</span>` : ""}</div>
+    ${relayLink ? `<div class="review-actions">${relayLink}</div>` : ""}
   </div>`;
 }
 
@@ -141,11 +153,14 @@ function renderRow(r) {
   const reviewToggle = reviews.length > 0
     ? `<button class="tips-toggle" data-toggle="${escapeHTML(id)}">${expanded ? "▾" : "▸"} ${reviews.length} review${reviews.length === 1 ? "" : "s"}</button>`
     : `<span class="no-reviews">No reviews yet</span>`;
+  const feedbackLink = id
+    ? `<a class="action-link" href="${FEEDBACK_FORM_BASE}${encodeURIComponent(id)}" target="_blank" rel="noopener">+ Leave feedback</a>`
+    : "";
 
   let html = `<tr data-id="${escapeHTML(id)}">
     <td data-label="Name" class="resource-name">
       ${escapeHTML(r["Person's name"] || "")}
-      ${reviewToggle}
+      <div class="row-actions">${reviewToggle}${feedbackLink}</div>
     </td>
     <td data-label="Organization">${escapeHTML(r.Organization || "")}</td>
     <td data-label="Category">${pillList(r.Category)}</td>

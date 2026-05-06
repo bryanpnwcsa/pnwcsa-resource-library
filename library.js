@@ -1,9 +1,13 @@
 /* PNWCSA Resource Library renderer.
    Two pages share this file; index.html sets SHOW_TIPS = false,
-   with-tips.html sets SHOW_TIPS = true. */
+   with-tips.html sets SHOW_TIPS = true (adds Organization column, Org filter,
+   and per-row "Leave a tip" links). */
 
 const RESOURCES_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQp_lYe9SV489ucdEE7tAf8FwgAVw6KuMz_yIOf2zFlAFfUpeBW8MjPipu74zM24bgYV9Ik3VIyv2Bj/pub?gid=1234420744&single=true&output=csv";
 const TIPS_CSV      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQp_lYe9SV489ucdEE7tAf8FwgAVw6KuMz_yIOf2zFlAFfUpeBW8MjPipu74zM24bgYV9Ik3VIyv2Bj/pub?gid=1049912398&single=true&output=csv";
+
+// Form for leaving a tip on a specific resource — ResourceID prefilled.
+const TIP_FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLScPkQ665YO0rsngcrdcMomCFfvXhdWPWHti5Vf9zIKPZYMmAw/viewform?usp=pp_url&entry.1553094980=";
 
 // Rows must have Approved=TRUE and Retracted!=TRUE to appear.
 const REQUIRE_APPROVAL = true;
@@ -13,6 +17,7 @@ const state = {
   search: "",
   activeCategories: new Set(),
   activeRegions: new Set(),
+  activeOrgs: new Set(),
   sortKey: "Resource name",
   sortDir: 1,
   expanded: new Set(),
@@ -67,8 +72,11 @@ function applyFilters(rows) {
     if (state.activeRegions.size > 0) {
       if (!splitMulti(r.Region).some(c => state.activeRegions.has(c))) return false;
     }
+    if (window.SHOW_TIPS && state.activeOrgs.size > 0) {
+      if (!splitMulti(r.Organization).some(o => state.activeOrgs.has(o))) return false;
+    }
     if (q) {
-      const hay = [r["Resource name"], r.Description, r.Notes, r["Why useful"], r.Category, r.Region]
+      const hay = [r["Resource name"], r.Organization, r.Description, r.Notes, r["Why useful"], r.Category, r.Region]
         .filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
@@ -93,9 +101,14 @@ function escapeHTML(s) {
   }[c]));
 }
 
+function ensureProtocol(u) {
+  if (!u) return "";
+  return /^https?:\/\//i.test(u) ? u : "https://" + u;
+}
+
 function shortUrl(u) {
   if (!u) return "";
-  try { return new URL(u).hostname.replace(/^www\./, ""); }
+  try { return new URL(ensureProtocol(u)).hostname.replace(/^www\./, ""); }
   catch { return u; }
 }
 
@@ -109,26 +122,39 @@ function renderRow(r) {
   const hasTips = window.SHOW_TIPS && tips.length > 0;
   const expanded = state.expanded.has(id);
 
-  const nameCell = r.Website
-    ? `<a href="${escapeHTML(r.Website)}" target="_blank" rel="noopener">${escapeHTML(r["Resource name"])}</a>`
+  const url = r.URL || r.Website; // legacy fallback
+  const nameCell = url
+    ? `<a href="${escapeHTML(ensureProtocol(url))}" target="_blank" rel="noopener">${escapeHTML(r["Resource name"])}</a>`
     : escapeHTML(r["Resource name"]);
 
   const desc = r.Description ? `<div>${escapeHTML(r.Description)}</div>` : "";
   const notes = r.Notes ? `<div class="notes">${escapeHTML(r.Notes)}</div>` : "";
 
-  const tipsToggle = window.SHOW_TIPS
-    ? `<button class="tips-toggle" data-toggle="${escapeHTML(id)}">
-         ${tips.length > 0 ? (expanded ? "▾" : "▸") + ` Farmer tips (${tips.length})` : "No farmer tips yet"}
-       </button>`
+  let actionLinks = "";
+  if (window.SHOW_TIPS) {
+    const toggle = `<button class="tips-toggle" data-toggle="${escapeHTML(id)}">
+      ${tips.length > 0 ? (expanded ? "▾" : "▸") + ` Farmer tips (${tips.length})` : "No farmer tips yet"}
+    </button>`;
+    const tipLink = id
+      ? `<a class="action-link" href="${TIP_FORM_BASE}${encodeURIComponent(id)}" target="_blank" rel="noopener">+ Leave a tip</a>`
+      : "";
+    actionLinks = `<div class="row-actions">${toggle}${tipLink}</div>`;
+  }
+
+  const orgCell = window.SHOW_TIPS
+    ? `<td data-label="Organization">${escapeHTML(r.Organization || "")}</td>`
     : "";
 
   let html = `<tr data-id="${escapeHTML(id)}">
-    <td data-label="Resource" class="resource-name">${nameCell}${tipsToggle}</td>
-    <td data-label="Website" class="website-cell">${r.Website ? `<a href="${escapeHTML(r.Website)}" target="_blank" rel="noopener">${escapeHTML(shortUrl(r.Website))}</a>` : ""}</td>
+    <td data-label="Resource" class="resource-name">${nameCell}${actionLinks}</td>
+    <td data-label="Website" class="website-cell">${url ? `<a href="${escapeHTML(ensureProtocol(url))}" target="_blank" rel="noopener">${escapeHTML(shortUrl(url))}</a>` : ""}</td>
+    ${orgCell}
     <td data-label="Category">${pillList(r.Category)}</td>
     <td data-label="Region">${pillList(r.Region)}</td>
     <td data-label="Description">${desc}${notes}</td>
   </tr>`;
+
+  const colCount = window.SHOW_TIPS ? 6 : 5;
 
   if (hasTips && expanded) {
     const tipsHTML = tips.map(t => {
@@ -140,7 +166,7 @@ function renderRow(r) {
         <div class="tip-attr">— ${attr}</div>
       </div>`;
     }).join("");
-    html += `<tr class="tips-row"><td colspan="5">${tipsHTML}</td></tr>`;
+    html += `<tr class="tips-row"><td colspan="${colCount}">${tipsHTML}</td></tr>`;
   }
 
   return html;
@@ -150,19 +176,26 @@ function render() {
   const rows = applySort(applyFilters(state.resources));
   const arrow = (k) => state.sortKey === k ? `<span class="arrow">${state.sortDir === 1 ? "▲" : "▼"}</span>` : "";
 
+  const orgHeader = window.SHOW_TIPS
+    ? `<th data-sort="Organization">Organization ${arrow("Organization")}</th>`
+    : "";
+
+  const colCount = window.SHOW_TIPS ? 6 : 5;
+
   const html = `
     <table>
       <thead>
         <tr>
           <th data-sort="Resource name">Resource name ${arrow("Resource name")}</th>
           <th>Website</th>
+          ${orgHeader}
           <th data-sort="Category">Category ${arrow("Category")}</th>
           <th data-sort="Region">Region ${arrow("Region")}</th>
           <th>Description</th>
         </tr>
       </thead>
       <tbody>
-        ${rows.length ? rows.map(renderRow).join("") : `<tr><td colspan="5" class="empty">No resources match your filters.</td></tr>`}
+        ${rows.length ? rows.map(renderRow).join("") : `<tr><td colspan="${colCount}" class="empty">No resources match your filters.</td></tr>`}
       </tbody>
     </table>
   `;
@@ -184,6 +217,7 @@ function renderFilterGroup(containerId, field, activeSet) {
 function renderChips() {
   renderFilterGroup("chips-category", "Category", state.activeCategories);
   renderFilterGroup("chips-region", "Region", state.activeRegions);
+  if (window.SHOW_TIPS) renderFilterGroup("chips-organization", "Organization", state.activeOrgs);
 }
 
 function postHeight() {
@@ -210,6 +244,7 @@ function attachHandlers() {
   };
   wireGroup("chips-category", state.activeCategories);
   wireGroup("chips-region", state.activeRegions);
+  wireGroup("chips-organization", state.activeOrgs);
 
   document.getElementById("table-container").addEventListener("click", (e) => {
     const sortHeader = e.target.closest("th[data-sort]");
